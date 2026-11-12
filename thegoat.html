@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Costos de Repostería - Sweet Cost</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Poppins & Caveat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bakery: {
+                            50: '#fff8f6',
+                            100: '#fbeee9',
+                            200: '#f8dcd3',
+                            300: '#f2beaf',
+                            400: '#e79680',
+                            500: '#da6f55',
+                            600: '#c55138',
+                            700: '#a43f29',
+                            800: '#873726',
+                            900: '#703225',
+                        },
+                        cream: {
+                            50: '#fdfbf7',
+                            100: '#f7f2e8',
+                            200: '#ede2ce',
+                            300: '#e0cca9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                        handwriting: ['Caveat', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-cream-50 text-gray-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Encabezado / Header -->
+    <header class="bg-white shadow-sm border-b border-bakery-100 sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-bakery-100 flex items-center justify-center text-bakery-600 text-xl font-bold">
+                    <i class="fa-solid fa-cake-candles"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 font-handwriting leading-tight text-bakery-600">Sweet Cost</h1>
+                    <p class="text-xs text-gray-500">Calculadora Completa & Biblioteca de Recetas</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="resetCurrentRecipe()" class="text-xs text-gray-500 hover:text-bakery-600 px-3 py-2 rounded-lg hover:bg-bakery-50 transition flex items-center gap-1" title="Limpia el armador actual para empezar una receta nueva">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">Nueva Receta</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- COLUMNA IZQUIERDA: Inventario de Ingredientes Base (4 cols) -->
+        <section class="lg:col-span-4 flex flex-col gap-6 no-print">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-bakery-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-packing text-bakery-500"></i>
+                        Mis Ingredientes (Precios de Compra)
+                    </h2>
+                    <span id="ingredient-count" class="text-xs font-medium bg-bakery-100 text-bakery-700 px-2.5 py-1 rounded-full">0 items</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">Agrega aquí tus ingredientes tal como los compras en la tienda (ej. paquete de harina de 1kg por $2.50).</p>
+
+                <!-- Formulario Agregar/Editar Ingrediente Base -->
+                <form id="ingredient-form" onsubmit="saveIngredient(event)" class="space-y-4 bg-cream-50 p-4 rounded-xl border border-cream-200 mb-6">
+                    <input type="hidden" id="ing-id" value="">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Nombre del Ingrediente</label>
+                        <input type="text" id="ing-name" required placeholder="Ej. Harina de Trigo, Huevos, Mantequilla" class="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-bakery-400 focus:border-bakery-400 outline-none transition">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Cantidad comprada</label>
+                            <input type="number" id="ing-package-qty" step="any" min="0.01" required placeholder="1000" class="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-bakery-400 focus:border-bakery-400 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Unidad</label>
+                            <select id="ing-unit" class="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-bakery-400 focus:border-bakery-400 outline-none transition bg-white">
+                                <option value="g">Gramos (g)</option>
+                                <option value="kg">Kilos (kg)</option>
+                                <option value="ml">Mililitros (ml)</option>
+                                <option value="l">Litros (L)</option>
+                                <option value="ud">Unidades (ud)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Precio total pagado ($)</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2 text-gray-400 text-sm">$</span>
+                            <input type="number" id="ing-price" step="0.01" min="0" required placeholder="0.00" class="w-full text-sm pl-7 pr-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-bakery-400 focus:border-bakery-400 outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button type="submit" id="btn-save-ing" class="flex-1 bg-bakery-500 hover:bg-bakery-600 text-white font-medium text-sm py-2 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-plus text-xs"></i> <span id="btn-ing-text">Guardar al Inventario</span>
+                        </button>
+                        <button type="button" id="btn-cancel-ing" onclick="resetIngredientForm()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-2 px-3 rounded-lg transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Lista de Ingredientes Guardados -->
+                <div id="ingredients-list" class="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUMNA DERECHA: Armador de Receta Multi-Ingrediente y Totales (8 cols) -->
+        <section class="lg:col-span-8 space-y-6">
+            
+            <!-- PANEL DE ARMADO DE RECETA -->
+            <div id="printable-area" class="bg-white rounded-2xl p-6 shadow-sm border border-bakery-100">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Nombre de la Torta / Receta</label>
+                        <input type="text" id="recipe-title" value="Torta de Chocolate de 2 Kilos" class="text-xl font-bold text-gray-900 w-full focus:ring-2 focus:ring-bakery-300 rounded px-2 py-1 -ml-2 border border-transparent hover:border-gray-200 outline-none transition">
+                    </div>
+                    <div class="flex items-center gap-2 no-print">
+                        <button onclick="saveRecipeToHistory()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3.5 py-2 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-bookmark"></i> Guardar Receta en Biblioteca
+                        </button>
+                        <button onclick="window.print()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs px-3.5 py-2 rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-print"></i> Exportar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Añadir ingrediente a esta receta -->
+                <div class="bg-cream-50 p-4 rounded-xl border border-cream-200 my-5 no-print">
+                    <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Agregar Ingrediente a la Receta</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        <div class="sm:col-span-6">
+                            <label class="block text-xs text-gray-600 mb-1">Seleccionar ingrediente</label>
+                            <select id="recipe-ing-select" onchange="updateRecipeUnitLabel()" class="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-bakery-400 outline-none bg-white">
+                                <!-- Dinámico -->
+                            </select>
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="block text-xs text-gray-600 mb-1">Cantidad utilizada</label>
+                            <div class="flex items-center">
+                                <input type="number" id="recipe-ing-qty" step="any" min="0.01" placeholder="Ej. 250" class="w-full text-sm px-3 py-2 rounded-l-lg border border-r-0 border-gray-300 focus:ring-2 focus:ring-bakery-400 outline-none">
+                                <span id="recipe-ing-unit" class="bg-gray-100 border border-l-0 border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 rounded-r-lg">g</span>
+                            </div>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button onclick="addIngredientToRecipe()" class="w-full bg-bakery-500 hover:bg-bakery-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-plus text-xs"></i> Añadir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de ingredientes en la receta -->
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 text-xs text-gray-400 font-medium uppercase">
+                                <th class="py-2 px-3">Ingrediente</th>
+                                <th class="py-2 px-3">Cantidad Usada</th>
+                                <th class="py-2 px-3">Costo Proporcional</th>
+                                <th class="py-2 px-3 text-right no-print">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recipe-table-body" class="divide-y divide-gray-100">
+                            <!-- Dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Adicionales y Costos Indirectos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-5 no-print">
+                    <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100 space-y-3">
+                        <h4 class="text-xs font-bold text-gray-700 uppercase">Mano de Obra y Servicios</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-500">Horas de Trabajo</label>
+                                <input type="number" id="labor-hours" value="2" step="0.5" min="0" oninput="calculateTotals()" class="w-full text-xs p-2 rounded border border-gray-300">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-500">Precio / Hora ($)</label>
+                                <input type="number" id="labor-rate" value="5" step="0.5" min="0" oninput="calculateTotals()" class="w-full text-xs p-2 rounded border border-gray-300">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-500">Costo de Empaque / Cajas / Bases ($)</label>
+                            <input type="number" id="packaging-cost" value="3.50" step="0.1" min="0" oninput="calculateTotals()" class="w-full text-xs p-2 rounded border border-gray-300">
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100 space-y-3">
+                        <h4 class="text-xs font-bold text-gray-700 uppercase">Margen & Porciones</h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-500">Servicios/Luz/Gas (%)</label>
+                                <input type="number" id="overhead-percent" value="10" step="1" min="0" oninput="calculateTotals()" class="w-full text-xs p-2 rounded border border-gray-300">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-500">Margen Ganancia (%)</label>
+                                <input type="number" id="profit-margin" value="40" step="5" min="0" oninput="calculateTotals()" class="w-full text-xs p-2 rounded border border-gray-300">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-500">Cantidad de Porciones / Rebanadas</label>
+                            <input type="number" id="portion-count" value="12" step="1" min="1" oninput="calculateTotals()" class="w-full text-xs p-2 rounded border border-gray-300">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen de Costos Fin de Receta -->
+                <div class="mt-6 bg-bakery-50 rounded-2xl p-5 border border-bakery-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                        <span class="block text-xs text-gray-500">Total Ingredientes:</span>
+                        <span id="lbl-ingredients-cost" class="text-lg font-bold text-gray-800">$0.00</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs text-gray-500">Costo Producción Total:</span>
+                        <span id="lbl-total-cost" class="text-lg font-bold text-gray-900">$0.00</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs text-gray-500">Precio Sugerido Venta:</span>
+                        <span id="lbl-suggested-price" class="text-xl font-extrabold text-bakery-600">$0.00</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs text-gray-500">Costo por Porción:</span>
+                        <span id="lbl-portion-price" class="text-lg font-bold text-emerald-700">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BIBLIOTECA Y HISTORIAL DE RECETAS -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-bakery-100 no-print">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-book-bookmark text-bakery-500"></i>
+                        Biblioteca / Historial de Recetas Guardadas
+                    </h2>
+                </div>
+                
+                <div id="history-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        // --- ESTADO GLOBAL ---
+        let ingredients = [];
+        let recipe = [];
+        let recipeHistory = [];
+
+        // --- LOCAL STORAGE Y PERSISTENCIA ---
+        function saveDataToLocalStorage() {
+            localStorage.setItem('sweetcost_ingredients', JSON.stringify(ingredients));
+            localStorage.setItem('sweetcost_recipe', JSON.stringify(recipe));
+            localStorage.setItem('sweetcost_history', JSON.stringify(recipeHistory));
+        }
+
+        function loadDataFromLocalStorage() {
+            try {
+                const savedIngs = localStorage.getItem('sweetcost_ingredients');
+                const savedRecipe = localStorage.getItem('sweetcost_recipe');
+                const savedHistory = localStorage.getItem('sweetcost_history');
+
+                if (savedIngs) ingredients = JSON.parse(savedIngs);
+                if (savedRecipe) recipe = JSON.parse(savedRecipe);
+                if (savedHistory) recipeHistory = JSON.parse(savedHistory);
+            } catch (err) {
+                console.error("Error al cargar datos de localStorage", err);
+            }
+        }
+
+        function resetAllData() {
+            // Se reemplaza por la limpieza única de la receta actual sin tocar inventario ni historial
+            resetCurrentRecipe();
+        }
+
+        function resetCurrentRecipe() {
+            recipe = [];
+            document.getElementById('recipe-title').value = "Nueva Receta de Torta";
+            document.getElementById('labor-hours').value = 2;
+            document.getElementById('labor-rate').value = 5;
+            document.getElementById('packaging-cost').value = 3.50;
+            document.getElementById('overhead-percent').value = 10;
+            document.getElementById('profit-margin').value = 40;
+            document.getElementById('portion-count').value = 12;
+
+            saveDataToLocalStorage();
+            renderRecipeTable();
+            calculateTotals();
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.onload = function() {
+            loadDataFromLocalStorage();
+            renderIngredients();
+            renderRecipeSelect();
+            renderRecipeTable();
+            renderHistory();
+            calculateTotals();
+        };
+
+        // --- CONVERSIÓN DE UNIDADES ---
+        function convertToStandardUnit(qty, unit) {
+            qty = parseFloat(qty) || 0;
+            if (unit === 'kg') return { qty: qty * 1000, unit: 'g' };
+            if (unit === 'l') return { qty: qty * 1000, unit: 'ml' };
+            return { qty: qty, unit: unit };
+        }
+
+        // --- GESTIÓN DE INVENTARIO BASE ---
+        function saveIngredient(e) {
+            if (e) e.preventDefault();
+
+            const idInput = document.getElementById('ing-id');
+            const nameInput = document.getElementById('ing-name');
+            const qtyInput = document.getElementById('ing-package-qty');
+            const unitInput = document.getElementById('ing-unit');
+            const priceInput = document.getElementById('ing-price');
+
+            const name = nameInput.value.trim();
+            const rawQty = parseFloat(qtyInput.value);
+            const unit = unitInput.value;
+            const price = parseFloat(priceInput.value);
+
+            if (!name || isNaN(rawQty) || rawQty <= 0 || isNaN(price) || price < 0) {
+                return;
+            }
+
+            const standard = convertToStandardUnit(rawQty, unit);
+            const unitCost = price / standard.qty;
+
+            const existingId = idInput.value;
+            if (existingId) {
+                const index = ingredients.findIndex(i => i.id === existingId);
+                if (index !== -1) {
+                    ingredients[index] = {
+                        id: existingId,
+                        name: name,
+                        packageQty: rawQty,
+                        unit: unit,
+                        standardQty: standard.qty,
+                        standardUnit: standard.unit,
+                        price: price,
+                        unitCost: unitCost
+                    };
+                }
+            } else {
+                const newIng = {
+                    id: 'ing_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    name: name,
+                    packageQty: rawQty,
+                    unit: unit,
+                    standardQty: standard.qty,
+                    standardUnit: standard.unit,
+                    price: price,
+                    unitCost: unitCost
+                };
+                ingredients.push(newIng);
+            }
+
+            saveDataToLocalStorage();
+            resetIngredientForm();
+            renderIngredients();
+            renderRecipeSelect();
+            renderRecipeTable();
+            calculateTotals();
+        }
+
+        function resetIngredientForm() {
+            document.getElementById('ing-id').value = '';
+            document.getElementById('ing-name').value = '';
+            document.getElementById('ing-package-qty').value = '';
+            document.getElementById('ing-price').value = '';
+            document.getElementById('ing-unit').value = 'g';
+            document.getElementById('btn-ing-text').innerText = 'Guardar al Inventario';
+            document.getElementById('btn-cancel-ing').classList.add('hidden');
+        }
+
+        function editIngredient(id) {
+            const ing = ingredients.find(i => i.id === id);
+            if (!ing) return;
+
+            document.getElementById('ing-id').value = ing.id;
+            document.getElementById('ing-name').value = ing.name;
+            document.getElementById('ing-package-qty').value = ing.packageQty;
+            document.getElementById('ing-unit').value = ing.unit;
+            document.getElementById('ing-price').value = ing.price;
+
+            document.getElementById('btn-ing-text').innerText = 'Actualizar Ingrediente';
+            document.getElementById('btn-cancel-ing').classList.remove('hidden');
+        }
+
+        function deleteIngredient(id) {
+            ingredients = ingredients.filter(i => i.id !== id);
+            recipe = recipe.filter(r => r.ingredientId !== id);
+            saveDataToLocalStorage();
+            renderIngredients();
+            renderRecipeSelect();
+            renderRecipeTable();
+            calculateTotals();
+        }
+
+        function renderIngredients() {
+            const list = document.getElementById('ingredients-list');
+            const count = document.getElementById('ingredient-count');
+            if (!list || !count) return;
+
+            count.innerText = `${ingredients.length} items`;
+
+            if (ingredients.length === 0) {
+                list.innerHTML = `<p class="text-xs text-gray-400 text-center py-6">No has agregado ingredientes aún.</p>`;
+                return;
+            }
+
+            list.innerHTML = ingredients.map(ing => `
+                <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm hover:border-bakery-200 transition">
+                    <div>
+                        <div class="font-medium text-xs text-gray-800">${ing.name}</div>
+                        <div class="text-[11px] text-gray-400">
+                            ${ing.packageQty} ${ing.unit} &bull; $${ing.price.toFixed(2)}
+                            <span class="text-bakery-600 font-semibold">($${ing.unitCost.toFixed(4)}/${ing.standardUnit})</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="editIngredient('${ing.id}')" class="text-gray-400 hover:text-bakery-600 p-1 rounded hover:bg-cream-100 transition text-xs" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deleteIngredient('${ing.id}')" class="text-gray-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition text-xs" title="Eliminar">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- GESTIÓN DE LA RECETA MULTI-INGREDIENTE ---
+        function renderRecipeSelect() {
+            const select = document.getElementById('recipe-ing-select');
+            if (!select) return;
+            select.innerHTML = '';
+
+            if (ingredients.length === 0) {
+                select.innerHTML = `<option value="">-- Agrega primero ingredientes al inventario --</option>`;
+                updateRecipeUnitLabel();
+                return;
+            }
+
+            select.innerHTML = ingredients.map(ing => `
+                <option value="${ing.id}">${ing.name} (${ing.packageQty} ${ing.unit})</option>
+            `).join('');
+
+            updateRecipeUnitLabel();
+        }
+
+        function updateRecipeUnitLabel() {
+            const select = document.getElementById('recipe-ing-select');
+            const unitSpan = document.getElementById('recipe-ing-unit');
+            if (!select || !unitSpan) return;
+            
+            const selectedId = select.value;
+            const ing = ingredients.find(i => i.id === selectedId);
+
+            if (ing) {
+                unitSpan.innerText = ing.standardUnit;
+            } else {
+                unitSpan.innerText = 'g';
+            }
+        }
+
+        function addIngredientToRecipe() {
+            const select = document.getElementById('recipe-ing-select');
+            if (!select) return;
+
+            const ingId = select.value;
+            const qtyInput = document.getElementById('recipe-ing-qty');
+            const qty = parseFloat(qtyInput.value);
+
+            if (!ingId || isNaN(qty) || qty <= 0) {
+                return;
+            }
+
+            const ingredient = ingredients.find(i => i.id === ingId);
+            if (!ingredient) return;
+
+            const existingIndex = recipe.findIndex(r => r.ingredientId === ingId);
+
+            if (existingIndex !== -1) {
+                recipe[existingIndex].qty += qty;
+            } else {
+                recipe.push({
+                    ingredientId: ingId,
+                    qty: qty
+                });
+            }
+
+            qtyInput.value = '';
+            renderRecipeTable();
+            calculateTotals();
+            saveDataToLocalStorage();
+        }
+
+        function deleteRecipeItem(ingId) {
+            recipe = recipe.filter(r => r.ingredientId !== ingId);
+            renderRecipeTable();
+            calculateTotals();
+            saveDataToLocalStorage();
+        }
+
+        function renderRecipeTable() {
+            const tbody = document.getElementById('recipe-table-body');
+            if (!tbody) return;
+
+            if (recipe.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-xs text-gray-400">Añade varios ingredientes para armar la receta completa de tu torta.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = recipe.map(item => {
+                const ing = ingredients.find(i => i.id === item.ingredientId);
+                if (!ing) return '';
+
+                const totalCost = item.qty * ing.unitCost;
+
+                return `
+                    <tr class="border-b border-gray-50 hover:bg-cream-50/50">
+                        <td class="py-2.5 px-3 font-medium text-gray-700">${ing.name}</td>
+                        <td class="py-2.5 px-3 text-gray-500">${item.qty} ${ing.standardUnit}</td>
+                        <td class="py-2.5 px-3 font-semibold text-gray-800">$${totalCost.toFixed(2)}</td>
+                        <td class="py-2.5 px-3 text-right no-print">
+                            <button onclick="deleteRecipeItem('${ing.id}')" class="text-gray-400 hover:text-rose-500 transition">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- CÁLCULO DE TOTALES DE LA TORTA ---
+        function calculateTotals() {
+            let totalIngredientsCost = 0;
+
+            recipe.forEach(item => {
+                const ing = ingredients.find(i => i.id === item.ingredientId);
+                if (ing) {
+                    totalIngredientsCost += item.qty * ing.unitCost;
+                }
+            });
+
+            const ingCostLbl = document.getElementById('lbl-ingredients-cost');
+            if (ingCostLbl) ingCostLbl.innerText = `$${totalIngredientsCost.toFixed(2)}`;
+
+            const laborHoursInput = document.getElementById('labor-hours');
+            const laborRateInput = document.getElementById('labor-rate');
+            const laborHours = laborHoursInput ? (parseFloat(laborHoursInput.value) || 0) : 0;
+            const laborRate = laborRateInput ? (parseFloat(laborRateInput.value) || 0) : 0;
+            const laborCost = laborHours * laborRate;
+
+            const packagingInput = document.getElementById('packaging-cost');
+            const packagingCost = packagingInput ? (parseFloat(packagingInput.value) || 0) : 0;
+
+            const overheadInput = document.getElementById('overhead-percent');
+            const overheadPercent = overheadInput ? (parseFloat(overheadInput.value) || 0) : 0;
+            const overheadCost = (totalIngredientsCost + laborCost + packagingCost) * (overheadPercent / 100);
+
+            const totalProductionCost = totalIngredientsCost + laborCost + packagingCost + overheadCost;
+            const totalCostLbl = document.getElementById('lbl-total-cost');
+            if (totalCostLbl) totalCostLbl.innerText = `$${totalProductionCost.toFixed(2)}`;
+
+            const profitInput = document.getElementById('profit-margin');
+            const profitMargin = profitInput ? (parseFloat(profitInput.value) || 0) : 0;
+            const profitAmount = totalProductionCost * (profitMargin / 100);
+            const suggestedPrice = totalProductionCost + profitAmount;
+
+            const suggestedLbl = document.getElementById('lbl-suggested-price');
+            if (suggestedLbl) suggestedLbl.innerText = `$${suggestedPrice.toFixed(2)}`;
+
+            const portionInput = document.getElementById('portion-count');
+            const portions = portionInput ? (parseInt(portionInput.value) || 1) : 1;
+            const pricePerPortion = portions > 0 ? suggestedPrice / portions : 0;
+            
+            const portionPriceLbl = document.getElementById('lbl-portion-price');
+            if (portionPriceLbl) portionPriceLbl.innerText = `$${pricePerPortion.toFixed(2)}`;
+        }
+
+        // --- BIBLIOTECA DE RECETAS (GUARDAR/CARGAR HISTORIAL) ---
+        function saveRecipeToHistory() {
+            const recipeTitleInput = document.getElementById('recipe-title');
+            const title = recipeTitleInput ? (recipeTitleInput.value.trim() || 'Receta de Torta sin título') : 'Receta de Torta sin título';
+
+            if (recipe.length === 0) {
+                return;
+            }
+
+            let totalIngredientsCost = 0;
+            recipe.forEach(item => {
+                const ing = ingredients.find(i => i.id === item.ingredientId);
+                if (ing) totalIngredientsCost += item.qty * ing.unitCost;
+            });
+
+            const laborHours = parseFloat(document.getElementById('labor-hours')?.value) || 0;
+            const laborRate = parseFloat(document.getElementById('labor-rate')?.value) || 0;
+            const laborCost = laborHours * laborRate;
+            const packagingCost = parseFloat(document.getElementById('packaging-cost')?.value) || 0;
+            const overheadPercent = parseFloat(document.getElementById('overhead-percent')?.value) || 0;
+            const overheadCost = (totalIngredientsCost + laborCost + packagingCost) * (overheadPercent / 100);
+
+            const totalCost = totalIngredientsCost + laborCost + packagingCost + overheadCost;
+            const profitMargin = parseFloat(document.getElementById('profit-margin')?.value) || 0;
+            const profitAmount = totalCost * (profitMargin / 100);
+            const suggestedPrice = totalCost + profitAmount;
+            const portions = parseInt(document.getElementById('portion-count')?.value) || 1;
+            const pricePerPortion = portions > 0 ? suggestedPrice / portions : 0;
+
+            const savedItem = {
+                id: 'rec_' + Date.now(),
+                title: title,
+                date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+                recipeItems: [...recipe],
+                laborHours: laborHours,
+                laborRate: laborRate,
+                packagingCost: packagingCost,
+                overheadPercent: overheadPercent,
+                profitMargin: profitMargin,
+                portions: portions,
+                totalCost: totalCost,
+                suggestedPrice: suggestedPrice,
+                pricePerPortion: pricePerPortion
+            };
+
+            recipeHistory.unshift(savedItem);
+            saveDataToLocalStorage();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            if (!container) return;
+
+            if (recipeHistory.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-400 sm:col-span-2 text-center py-6">Tu biblioteca de recetas guardadas está vacía.</p>`;
+                return;
+            }
+
+            container.innerHTML = recipeHistory.map(item => `
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between gap-3 hover:border-bakery-200 transition">
+                    <div>
+                        <div class="flex justify-between items-start mb-1">
+                            <h3 class="font-semibold text-sm text-gray-800">${item.title}</h3>
+                            <span class="text-[10px] bg-cream-200 text-gray-600 px-2 py-0.5 rounded-full">${item.date}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 space-y-1">
+                            <p>Ingredientes: <span class="font-semibold text-gray-700">${item.recipeItems.length} items</span></p>
+                            <p>Costo Total: <span class="font-semibold text-gray-700">$${item.totalCost.toFixed(2)}</span></p>
+                            <p>Precio Sugerido: <span class="font-semibold text-bakery-600">$${item.suggestedPrice.toFixed(2)}</span></p>
+                            <p class="text-[11px] text-gray-400 font-medium">Porción: $${item.pricePerPortion.toFixed(2)} (${item.portions} porciones)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 pt-2 border-t border-gray-50">
+                        <button onclick="loadRecipeFromHistory('${item.id}')" class="flex-1 bg-bakery-50 hover:bg-bakery-100 text-bakery-700 font-medium text-xs py-1.5 px-3 rounded-lg transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-folder-open text-xs"></i> Cargar Receta
+                        </button>
+                        <button onclick="deleteHistoryItem('${item.id}')" class="text-gray-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition text-xs" title="Eliminar">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadRecipeFromHistory(id) {
+            const item = recipeHistory.find(h => h.id === id);
+            if (!item) return;
+
+            const titleInput = document.getElementById('recipe-title');
+            if (titleInput) titleInput.value = item.title;
+
+            recipe = [...item.recipeItems];
+
+            const laborHoursInput = document.getElementById('labor-hours');
+            if (laborHoursInput) laborHoursInput.value = item.laborHours;
+
+            const laborRateInput = document.getElementById('labor-rate');
+            if (laborRateInput) laborRateInput.value = item.laborRate;
+
+            const packagingInput = document.getElementById('packaging-cost');
+            if (packagingInput) packagingInput.value = item.packagingCost;
+
+            const overheadInput = document.getElementById('overhead-percent');
+            if (overheadInput) overheadInput.value = item.overheadPercent;
+
+            const profitInput = document.getElementById('profit-margin');
+            if (profitInput) profitInput.value = item.profitMargin;
+
+            const portionInput = document.getElementById('portion-count');
+            if (portionInput) portionInput.value = item.portions;
+
+            renderRecipeTable();
+            calculateTotals();
+            saveDataToLocalStorage();
+        }
+
+        function deleteHistoryItem(id) {
+            recipeHistory = recipeHistory.filter(h => h.id !== id);
+            saveDataToLocalStorage();
+            renderHistory();
+        }
+    </script>
+</body>
+</html>
